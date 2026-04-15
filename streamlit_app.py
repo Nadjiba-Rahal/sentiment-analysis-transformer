@@ -1,6 +1,5 @@
 import streamlit as st
 from predict import SentimentPredictor
-import os
 
 st.set_page_config(
     page_title="Sentiment Analysis AI",
@@ -15,13 +14,11 @@ st.write("Enter a text and the model will predict sentiment.")
 # -----------------------------
 @st.cache_resource
 def load_model():
-    model_path = os.path.join("outputs", "best_model", "model_weights.pt")
-
-    if not os.path.exists(model_path):
-        st.error( "Model not found! Please train the model first or add model_weights.pt in outputs/best_model/")
+    try:
+        return SentimentPredictor()
+    except Exception as e:
+        st.error(f"Failed to load model: {e}")
         st.stop()
-
-    return SentimentPredictor()
 
 predictor = load_model()
 
