@@ -114,24 +114,40 @@ def plot_pr_roc_curves(y_true, y_proba, out_dir: str = "outputs"):
     plt.close()
     logger.info(f"Saved → {out}")
 
-
 def run_all_plots(report_path: str, history_path: str = None, out_dir: str = "outputs"):
     """Generate all plots from saved evaluation artefacts."""
+    
     Path(out_dir).mkdir(parents=True, exist_ok=True)
-    report = json.loads(Path(report_path).read_text())
 
-    if report.get("confusion_matrix"):
+    report_file = Path(report_path)
+
+    # ─────────────────────────────
+    # SAFE LOAD REPORT (FIX)
+    # ─────────────────────────────
+    if not report_file.exists():
+        logger.warning(f"⚠️ Report not found: {report_path}")
+        logger.warning("Skipping evaluation plots.")
+        report = None
+    else:
+        report = json.loads(report_file.read_text())
+
+    # ─────────────────────────────
+    # CONFUSION MATRIX
+    # ─────────────────────────────
+    if report and report.get("confusion_matrix"):
         plot_confusion_matrix(report["confusion_matrix"], out_dir)
+    else:
+        logger.warning("No confusion matrix found.")
 
-    if history_path and Path(history_path).exists():
-        plot_training_history(history_path, out_dir)
+    # ─────────────────────────────
+    # TRAINING HISTORY
+    # ─────────────────────────────
+    if history_path:
+        history_file = Path(history_path)
 
-    logger.info("All plots saved.")
+        if history_file.exists():
+            plot_training_history(history_path, out_dir)
+        else:
+            logger.warning(f"⚠️ Training history not found: {history_path}")
 
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    run_all_plots(
-        report_path="outputs/evaluation_report.json",
-        history_path="outputs/logs/training_history.json",
-    )
+    logger.info("All available plots saved.")
