@@ -16,13 +16,13 @@ tokenizer:
 
 training:
   epochs: 4
-  batch_size: 8              # SAFE for laptops, adjust if having more GPU memory
+  batch_size: 16              # 8 is SAFE for laptops, 16 for GPU memory
   learning_rate: 2.0e-5               # Small LR for fine-tuning
   weight_decay: 0.01
   warmup_ratio: 0.1                   # 10 % of steps for LR warm-up
   gradient_clip: 1.0
   seed: 42
-  fp16: false                          # avoid craching CPU-only environments
+  fp16: true                          # avoid craching CPU-only environments
   eval_strategy: "epoch"
   save_best_metric: "f1"
 
