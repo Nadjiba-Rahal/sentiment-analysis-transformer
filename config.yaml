@@ -1,0 +1,41 @@
+# ─────────────────────────────────────────────
+#  Sentiment Analysis – Project Configuration
+# ─────────────────────────────────────────────
+
+model:
+  backbone: "distilbert-base-uncased"         # lighter and faster
+  num_labels: 2                        # Positive / Negative
+  hidden_dropout_prob: 0.3
+  classifier_dropout: 0.1
+
+tokenizer:
+  max_length: 256                      # Max token sequence length
+  padding: "max_length"
+  truncation: true
+  lowercase: true
+
+training:
+  epochs: 4
+  batch_size: 8              # SAFE for laptops, adjust if having more GPU memory
+  learning_rate: 2.0e-5               # Small LR for fine-tuning
+  weight_decay: 0.01
+  warmup_ratio: 0.1                   # 10 % of steps for LR warm-up
+  gradient_clip: 1.0
+  seed: 42
+  fp16: false                          # avoid craching CPU-only environments
+  eval_strategy: "epoch"
+  save_best_metric: "f1"
+
+data:
+  train_path: "data/train.csv"
+  val_path:   "data/val.csv"
+  test_path:  "data/test.csv"
+  text_col:   "text"
+  label_col:  "label"
+  val_split:  0.1
+  test_split: 0.1
+
+output:
+  model_dir:  "outputs/best_model"
+  logs_dir:   "outputs/logs"
+  report_path: "outputs/evaluation_report.json"
