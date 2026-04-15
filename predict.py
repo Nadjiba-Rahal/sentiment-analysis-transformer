@@ -56,12 +56,11 @@ class SentimentPredictor:
 
         # Load fine-tuned model
         self.model = SentimentClassifier.load(
-            path=cfg["output"]["model_dir"],
+            path="Nadjiba04/sentiment-distilbert",
             model_name=mod_cfg["backbone"],
             num_labels=mod_cfg["num_labels"],
             device=device_str,
         ).to(self.device)
-        self.model.eval()
 
         logger.info(f"Predictor ready on {self.device}")
 
