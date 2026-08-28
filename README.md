@@ -1,191 +1,126 @@
-# Sentiment Lens: Transformer Sentiment Analysis
+<div align="center">
 
-A production-grade, end-to-end sentiment analysis pipeline built on top of a
-**pre-trained Transformer Encoder (BERT)**, following every principle of modern NLP:
-tokenization, contextual embeddings, discriminative fine-tuning, and extrinsic evaluation.
+# Sentiment Lens
 
----
+### Transformer-powered sentiment analysis for text and review datasets
 
-## Architecture Overview
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Transformers](https://img.shields.io/badge/Hugging%20Face-Transformers-FFD21E?logo=huggingface&logoColor=111827)](https://huggingface.co/docs/transformers)
+[![Streamlit](https://img.shields.io/badge/UI-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
 
-```
-Raw Text
-   │
-   ▼
-┌─────────────────────────────────┐
-│       Text Normalization        │  HTML stripping, URL removal,
-│       (preprocess.py)           │  lowercasing, whitespace collapse
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│   Sub-word Tokenization         │  WordPiece (BERT) splits rare words
-│   (SentimentTokenizer)          │  into sub-word units → integer IDs
-└──────────────┬──────────────────┘
-               │
-               ▼
-┌─────────────────────────────────┐
-│  BERT Transformer Encoder       │  12 layers × 12 attention heads
-│  Contextual Embeddings          │  Each word's vector changes based
-│  (model.py)                     │  on ALL surrounding words
-└──────────────┬──────────────────┘
-               │  [CLS] token embedding (768-dim)
-               ▼
-┌─────────────────────────────────┐
-│  Discriminative Classifier      │  Linear(768→384) → GELU → Linear(384→2)
-│  Head                           │  Directly learns the boundary between
-└──────────────┬──────────────────┘  Positive and Negative classes
-               │
-               ▼
-          NEGATIVE / POSITIVE
-          + confidence score
+An end-to-end NLP project that fine-tunes a DistilBERT encoder, exposes a reusable inference layer, and serves it through a focused Streamlit workspace and FastAPI endpoint.
+
+</div>
+
+## What it does
+
+- Classifies text as positive or negative with confidence scores.
+- Normalizes HTML, URLs, email addresses, casing, and whitespace before tokenization.
+- Analyzes individual reviews or entire CSV files in the web app.
+- Exports batch predictions as a new CSV file.
+- Supports training, held-out evaluation, metrics, and visual reports.
+- Shares one predictor between the UI, command line, and API.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Raw text] --> B[Normalize]
+    B --> C[DistilBERT tokenizer]
+    C --> D[Transformer encoder]
+    D --> E[Classifier head]
+    E --> F[Sentiment and confidence]
+    F --> G[Streamlit]
+    F --> H[FastAPI]
 ```
 
----
+## Run locally
 
-## Project Structure
-
-```
-sentiment-analysis-transformer/
-├── config.yaml               ← All hyper-parameters in one place
-├── requirements.txt
-├── prepare_data.py           ← Download & split IMDB / SST-2 / Yelp
-├── preprocess.py             ← Normalization + tokenization pipeline
-├── dataset.py                ← PyTorch Dataset & DataLoader factory
-├── model.py                  ← Transformer encoder + classifier head
-├── train.py                  ← Discriminative fine-tuning loop
-├── metrics.py                ← Accuracy, F1, ROC-AUC, MCC, CM
-├── visualize.py              ← Training curves and confusion matrix
-├── predict.py                ← Shared production inference interface
-├── streamlit_app.py          ← Interactive web application
-└── api.py                    ← FastAPI JSON endpoint
-├── data/                     ← train.csv / val.csv / test.csv (auto-generated)
-└── outputs/
-    ├── best_model/           ← Saved fine-tuned weights
-    ├── logs/                 ← training_history.json
-    └── evaluation_report.json
-```
-
----
-
-## Quick Start
-
-### 1. Install Dependencies
 ```bash
+git clone https://github.com/Nadjiba-Rahal/sentiment-analysis-transformer.git
+cd sentiment-analysis-transformer
+python -m venv .venv
+```
+
+Activate the environment, then install dependencies:
+
+```bash
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
 pip install -r requirements.txt
+streamlit run streamlit_app.py
 ```
 
-### 2. Prepare Data (IMDB, SST-2, or Yelp)
-```bash
-# Download and split IMDB (50K reviews, ~2 min)
-python prepare_data.py --dataset imdb
+The first launch downloads the fine-tuned checkpoint from Hugging Face. It is cached locally after that.
 
-# Or use the Stanford Sentiment Treebank (SST-2)
-python prepare_data.py --dataset sst2
-```
+## Interfaces
 
-### 3. Fine-Tune the Model
-```bash
-python train.py config.yaml
-```
+### Streamlit workspace
 
-The trainer will:
-- Apply **discriminative learning rates** (lower LR for early layers)
-- Use **linear warm-up + decay** scheduling
-- Save the **best checkpoint** by validation F1
-- Apply **early stopping** to prevent overfitting
-- Run **extrinsic evaluation** on the held-out test set
-
-### 4. Predict Sentiment
-```bash
-# Single text
-python predict.py "This movie was absolutely phenomenal!"
-
-# Interactive mode
-python predict.py --interactive
-
-# Batch file (one review per line)
-python predict.py --file reviews.txt
-```
-
-### 5. Visualise Results
-```bash
-python visualize.py
-# → outputs/training_curves.png
-# → outputs/confusion_matrix.png
-# → outputs/pr_roc_curves.png
-```
-
-### 6. Launch the web interfaces
 ```bash
 streamlit run streamlit_app.py
 ```
 
-The fine-tuned checkpoint is downloaded from Hugging Face on first launch and
-cached locally. To run the JSON API instead:
+Use the single-text analyzer for quick exploration or upload a CSV, choose its text column, and download predictions.
+
+### FastAPI service
+
 ```bash
 uvicorn api:app --reload
 ```
-Open `http://localhost:8000/docs` for the interactive API contract.
 
----
+| Route | Purpose |
+|---|---|
+| `GET /` | Service information |
+| `GET /health` | Runtime health check |
+| `POST /predict` | Classify one text payload |
+| `GET /docs` | Interactive OpenAPI documentation |
 
-## Design Decisions
+Example request:
 
-### Why a Transformer Encoder?
-BERT processes every token in relation to every other token simultaneously
-(bidirectional attention), producing **contextual embeddings** where the same
-word gets a different representation depending on context. This captures nuances
-like negation ("not good") that bag-of-words models miss entirely.
-
-### Why Discriminative Fine-Tuning?
-Instead of a single global learning rate, we apply **layer-wise decaying LRs**:
-- Embedding layer: `LR × 0.1` — preserve general vocabulary knowledge
-- Early encoder layers: `LR × 0.1–0.5` — preserve syntactic patterns
-- Late encoder layers: `LR × 0.5–1.0` — adapt to sentiment features
-- Classifier head: `LR × 1.0` — learn the task boundary freely
-
-This prevents **catastrophic forgetting** while maximising task-specific adaptation.
-
-### Why Extrinsic Evaluation on a Held-Out Test Set?
-The test set is never touched during training or hyper-parameter selection.
-Only after training is complete do we evaluate on it — giving an unbiased
-estimate of real-world performance.
-
----
-
-## Expected Results (BERT-base on IMDB)
-
-| Metric    | Score  |
-|-----------|--------|
-| Accuracy  | ~93 %  |
-| F1        | ~93 %  |
-| ROC-AUC   | ~98 %  |
-| MCC       | ~0.86  |
-
----
-
-## Configuration Reference (`config.yaml`)
-
-| Key | Description |
-|-----|-------------|
-| `model.backbone` | HuggingFace model name (`bert-base-uncased`, `distilbert-base-uncased`, `roberta-base`) |
-| `tokenizer.max_length` | Maximum token sequence length (256–512) |
-| `training.learning_rate` | Base LR for the classifier head (typically `1e-5`–`5e-5`) |
-| `training.epochs` | Number of fine-tuning epochs (3–5 is usually sufficient) |
-| `training.warmup_ratio` | Fraction of steps for LR warm-up (0.06–0.1) |
-| `training.fp16` | Enable mixed-precision training (requires CUDA GPU) |
-
----
-
-## Swapping the Backbone
-
-Change one line in `config.yaml`:
-```yaml
-model:
-  backbone: "distilbert-base-uncased"   # 40 % faster, ~97 % of BERT's accuracy
-  # backbone: "roberta-base"            # Often outperforms BERT on sentiment
-  # backbone: "bert-large-uncased"      # Larger, slower, higher ceiling
+```json
+{
+  "text": "The product exceeded my expectations."
+}
 ```
 
-No other code changes needed.
+## Train and evaluate
+
+Prepare a dataset:
+
+```bash
+python prepare_data.py --dataset imdb
+```
+
+Train and evaluate the model:
+
+```bash
+python train.py config.yaml
+python visualize.py
+```
+
+The pipeline writes checkpoints, training history, evaluation metrics, and plots under `outputs/`. Generated artifacts are ignored by git.
+
+## Repository map
+
+| File | Responsibility |
+|---|---|
+| `streamlit_app.py` | Interactive text and CSV analysis |
+| `api.py` | FastAPI serving layer |
+| `predict.py` | Shared model loading and inference |
+| `model.py` | Transformer encoder and classification head |
+| `preprocess.py` | Text normalization and tokenization |
+| `train.py` | Fine-tuning loop and checkpointing |
+| `metrics.py` | Evaluation metrics and reports |
+| `visualize.py` | Training and evaluation plots |
+| `config.yaml` | Model, data, and training configuration |
+
+## Model configuration
+
+Edit `config.yaml` to change the backbone, sequence length, batch size, learning rate, epochs, or output locations. The default backbone is `distilbert-base-uncased` for a practical CPU-friendly inference experience.
+
+## License
+
+No license file is currently included in the repository.
