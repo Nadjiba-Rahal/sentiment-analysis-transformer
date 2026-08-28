@@ -11,11 +11,11 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    .block-container { max-width: 1180px; padding-top: 3rem; }
-    .hero { padding: 1.2rem 0 2rem; border-bottom: 1px solid #d9e2e8; margin-bottom: 2rem; }
+    .block-container { max-width: 1280px; padding-top: 1.5rem; padding-bottom: 1rem; }
+    .hero { padding: .5rem 0 1.25rem; border-bottom: 1px solid #d9e2e8; margin-bottom: 1.25rem; }
     .eyebrow { color: #007c83; font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-    .hero h1 { color: #102a43; font-size: clamp(2.2rem, 5vw, 4.6rem); line-height: 1; margin: .5rem 0 1rem; }
-    .hero p { color: #486581; font-size: 1.08rem; max-width: 650px; }
+    .hero h1 { color: #102a43; font-size: clamp(2rem, 4vw, 3.5rem); line-height: 1; margin: .35rem 0 .7rem; }
+    .hero p { color: #486581; font-size: 1rem; max-width: 650px; margin-bottom: 0; }
     .result-card { border-left: 5px solid #007c83; background: #f0f7f7; padding: 1.25rem 1.5rem; margin: 1rem 0; }
     div[data-testid="stMetricValue"] { color: #102a43; }
 </style>
@@ -49,9 +49,9 @@ with st.sidebar:
     st.divider()
     st.caption("Inputs are normalized before tokenization. URLs, HTML, and excess whitespace are removed.")
 
-single_tab, batch_tab = st.tabs(["Single text", "Batch CSV"])
+single_column, batch_workspace = st.columns([1, 1], gap="large")
 
-with single_tab:
+with single_column:
     st.subheader("Analyze a text")
     example_options = {
         "Write your own review": "",
@@ -83,7 +83,7 @@ with single_tab:
         else:
             st.warning("Enter some text before running an analysis.")
 
-with batch_tab:
+with batch_workspace:
     st.subheader("Score a collection of texts")
     st.caption("Upload a CSV containing a column of reviews or comments. Predictions are added without changing your original data.")
     uploaded_file = st.file_uploader("Upload CSV", type="csv")
@@ -93,13 +93,19 @@ with batch_tab:
         if not text_columns:
             st.error("No text column was found in this CSV.")
         else:
-            batch_column = st.selectbox("Text column", text_columns)
+            selected_text_column = st.selectbox("Text column", text_columns)
             if st.button("Analyze CSV", type="primary"):
-                texts = batch_df[batch_column].fillna("").astype(str).tolist()
+                texts = batch_df[selected_text_column].fillna("").astype(str).tolist()
                 results = predictor.predict(texts)
                 result_df = batch_df.copy()
                 result_df["sentiment"] = [r["label"].split()[0].lower() for r in results]
                 result_df["confidence"] = [r["confidence"] for r in results]
+                positive_count = int((result_df["sentiment"] == "positive").sum())
+                negative_count = len(result_df) - positive_count
+                summary_columns = st.columns(3)
+                summary_columns[0].metric("Rows analyzed", len(result_df))
+                summary_columns[1].metric("Positive", positive_count)
+                summary_columns[2].metric("Negative", negative_count)
                 st.dataframe(result_df, use_container_width=True, hide_index=True)
                 st.download_button(
                     "Download predictions",
