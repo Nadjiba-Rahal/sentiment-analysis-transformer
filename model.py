@@ -66,11 +66,14 @@ class SentimentClassifier(nn.Module):
     # ─────────────────────────────────────────────
     def forward(self, input_ids, attention_mask, token_type_ids=None, labels=None):
 
-        outputs = self.encoder(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            token_type_ids=token_type_ids,
-        )
+        encoder_inputs = {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+        }
+        if token_type_ids is not None and "token_type_ids" in self.encoder.forward.__code__.co_varnames:
+            encoder_inputs["token_type_ids"] = token_type_ids
+
+        outputs = self.encoder(**encoder_inputs)
 
         cls_embedding = outputs.last_hidden_state[:, 0, :]
         logits = self.classifier(cls_embedding)

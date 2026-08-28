@@ -20,16 +20,18 @@ from preprocess import TextNormalizer, SentimentTokenizer
 logger = logging.getLogger(__name__)
 
 LABEL_MAP = {0: "NEGATIVE ❌", 1: "POSITIVE ✅"}
+PROJECT_ROOT = Path(__file__).resolve().parent
 
 
 class SentimentPredictor:
-    def __init__(self, config_path: str = "config.yaml"):
+    def __init__(self, config_path: str | None = None):
 
         # ─────────────────────────────────────────────
         # SAFE CONFIG LOADING (FIXED)
         # ─────────────────────────────────────────────
-        if Path(config_path).exists():
-            cfg = yaml.safe_load(Path(config_path).read_text())
+        config_file = Path(config_path) if config_path else PROJECT_ROOT / "config.yaml"
+        if config_file.exists():
+            cfg = yaml.safe_load(config_file.read_text())
         else:
             logger.warning("config.yaml not found → using default config")
 

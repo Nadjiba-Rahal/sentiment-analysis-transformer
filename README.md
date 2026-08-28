@@ -1,4 +1,4 @@
-# 🧠 Sentiment Analysis with BERT Fine-Tuning
+# Sentiment Lens: Transformer Sentiment Analysis
 
 A production-grade, end-to-end sentiment analysis pipeline built on top of a
 **pre-trained Transformer Encoder (BERT)**, following every principle of modern NLP:
@@ -46,18 +46,19 @@ Raw Text
 ## Project Structure
 
 ```
-sentiment_analysis/
+sentiment-analysis-transformer/
 ├── config.yaml               ← All hyper-parameters in one place
 ├── requirements.txt
-├── src/
-│   ├── prepare_data.py       ← Download & split IMDB / SST-2 / Yelp
-│   ├── preprocess.py         ← Normalization + tokenization pipeline
-│   ├── dataset.py            ← PyTorch Dataset & DataLoader factory
-│   ├── model.py              ← BERT + classifier head (fine-tunable)
-│   ├── train.py              ← Discriminative fine-tuning loop
-│   ├── metrics.py            ← Accuracy, F1, ROC-AUC, MCC, CM
-│   ├── visualize.py          ← Training curves, confusion matrix, PR/ROC
-│   └── predict.py            ← Production inference interface
+├── prepare_data.py           ← Download & split IMDB / SST-2 / Yelp
+├── preprocess.py             ← Normalization + tokenization pipeline
+├── dataset.py                ← PyTorch Dataset & DataLoader factory
+├── model.py                  ← Transformer encoder + classifier head
+├── train.py                  ← Discriminative fine-tuning loop
+├── metrics.py                ← Accuracy, F1, ROC-AUC, MCC, CM
+├── visualize.py              ← Training curves and confusion matrix
+├── predict.py                ← Shared production inference interface
+├── streamlit_app.py          ← Interactive web application
+└── api.py                    ← FastAPI JSON endpoint
 ├── data/                     ← train.csv / val.csv / test.csv (auto-generated)
 └── outputs/
     ├── best_model/           ← Saved fine-tuned weights
@@ -77,15 +78,15 @@ pip install -r requirements.txt
 ### 2. Prepare Data (IMDB, SST-2, or Yelp)
 ```bash
 # Download and split IMDB (50K reviews, ~2 min)
-python src/prepare_data.py --dataset imdb
+python prepare_data.py --dataset imdb
 
 # Or use the Stanford Sentiment Treebank (SST-2)
-python src/prepare_data.py --dataset sst2
+python prepare_data.py --dataset sst2
 ```
 
 ### 3. Fine-Tune the Model
 ```bash
-python src/train.py config.yaml
+python train.py config.yaml
 ```
 
 The trainer will:
@@ -98,22 +99,34 @@ The trainer will:
 ### 4. Predict Sentiment
 ```bash
 # Single text
-python src/predict.py "This movie was absolutely phenomenal!"
+python predict.py "This movie was absolutely phenomenal!"
 
 # Interactive mode
-python src/predict.py --interactive
+python predict.py --interactive
 
 # Batch file (one review per line)
-python src/predict.py --file reviews.txt
+python predict.py --file reviews.txt
 ```
 
 ### 5. Visualise Results
 ```bash
-python src/visualize.py
+python visualize.py
 # → outputs/training_curves.png
 # → outputs/confusion_matrix.png
 # → outputs/pr_roc_curves.png
 ```
+
+### 6. Launch the web interfaces
+```bash
+streamlit run streamlit_app.py
+```
+
+The fine-tuned checkpoint is downloaded from Hugging Face on first launch and
+cached locally. To run the JSON API instead:
+```bash
+uvicorn api:app --reload
+```
+Open `http://localhost:8000/docs` for the interactive API contract.
 
 ---
 

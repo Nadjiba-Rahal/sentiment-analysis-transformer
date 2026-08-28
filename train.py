@@ -340,7 +340,7 @@ def main():
     trainer.train()
 
     logger.info("Running final evaluation on held-out test set …")
-    from evaluate import run_evaluation
+    from metrics import run_evaluation
     run_evaluation(cfg, test_loader, device)
 
 

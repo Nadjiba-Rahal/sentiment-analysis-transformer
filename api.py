@@ -1,35 +1,23 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from pydantic import BaseModel, Field
+from predict import SentimentPredictor
 
 app = FastAPI(title="Sentiment Analysis API")
 
-# Load model once (IMPORTANT: production optimization)
-MODEL_PATH = "outputs/best_model"
-
-tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
-model.eval()
+predictor = SentimentPredictor()
 
 
 class TextRequest(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=2000)
 
 
 def predict(text: str):
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
-
-    with torch.no_grad():
-        outputs = model(**inputs)
-        probs = torch.softmax(outputs.logits, dim=1)
-
-    label = torch.argmax(probs).item()
-    confidence = torch.max(probs).item()
+    result = predictor.predict_one(text)
 
     return {
-        "sentiment": "positive" if label == 1 else "negative",
-        "confidence": float(confidence)
+        "sentiment": result["label"].split()[0].lower(),
+        "confidence": result["confidence"],
+        "probabilities": result["proba"],
     }
 
 
@@ -40,4 +28,9 @@ def get_prediction(req: TextRequest):
 
 @app.get("/")
 def home():
-    return {"message": "Sentiment Analysis API is running "}
+    return {"message": "Sentiment Analysis API is running", "docs": "/docs"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "model": "distilbert-sentiment", "device": str(predictor.device)}
